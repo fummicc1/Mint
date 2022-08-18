@@ -361,6 +361,17 @@ public class Mint {
             }
             // copy using shell instead of FileManager via PathKit because it removes executable permissions on Linux
             try Task.run("cp", executablePath.string, destinationPackagePath.executablePath.string)
+            let dependencies = try Task.capture("otool", "-L", executablePath.string)
+            let dependenciePaths = dependencies.stdout.split(separator: "\n").map { $0 }
+            for dependency in dependenciePaths {
+                guard dependency.starts(with: "@rpath") else {
+                    continue
+                }
+                if verbose {
+                    standardOut.print("Copying \(dependency) to \(destinationPackagePath.executablePath)")
+                }
+                try Task.run(bash: "cp \"\(dependency)\" \"\(destinationPackagePath.executablePath)\"")
+            }
         }
 
         let resourcesFile = packageCheckoutPath + "Package.resources"
